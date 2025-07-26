@@ -1,0 +1,86 @@
+import 'package:flutter/material.dart';
+
+class WelcomeScreen extends StatefulWidget {
+  const WelcomeScreen({super.key});
+
+  @override
+  State<WelcomeScreen> createState() => _WelcomeScreenState();
+}
+
+class _WelcomeScreenState extends State<WelcomeScreen> {
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: const Color(0xFF7F090B),
+      
+      body: Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: <Widget>[
+            Center(
+              child: Image.asset(
+                'assets/logo.png',
+                width: 200,
+              ),
+            ),
+            Container(
+              width: double.infinity,
+              height: 200,
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(8.0),
+              ),
+              padding: const EdgeInsets.all(16.0),
+              child:Column(
+                children: [
+                  GestureDetector(
+                    onTap: () {
+                      
+                    },
+                    child: Container(
+                      width: MediaQuery.of(context).size.width * 0.8,
+                      padding: const EdgeInsets.all(16.0),
+                      decoration: BoxDecoration(
+                        color:  const Color(0xFF7F090B),
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: const Text(
+                        'Tap to Login',
+                        textAlign: TextAlign.center,
+                        style: TextStyle(color: Colors.white, fontSize: 16,  
+                        
+                        ),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 10),
+                  GestureDetector(
+                    onTap: () {
+                      
+                    },
+                    child: Container(
+                      width: MediaQuery.of(context).size.width * 0.8,
+                      padding: const EdgeInsets.all(16.0),
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(color: const Color(0xFF7F090B))
+                      ),
+                      child: const Text(
+                        'Forgot Password',
+                        textAlign: TextAlign.center,
+                        style: TextStyle(color:Color(0xFF7F090B), fontSize: 16,  
+                        
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              )
+            )
+          ],
+        ),
+      ),
+    );
+  }
+}
