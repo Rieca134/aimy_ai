@@ -177,7 +177,7 @@ class _LoginPageState extends State<LoginPage> {
               const Align(
                 alignment: Alignment.centerLeft,
                 child: Text(
-                  'Username',
+                  'Student ID',
                   style: TextStyle(
                     fontSize: 16,
                     fontWeight: FontWeight.bold,
@@ -189,7 +189,7 @@ class _LoginPageState extends State<LoginPage> {
               TextField(
                 controller: _usernameController,
                 decoration: const InputDecoration(
-                  hintText: 'Enter your username',
+                  hintText: 'Enter your student ID',
                   filled: true,
                   fillColor: Colors.white,
                   border: OutlineInputBorder(

@@ -1,6 +1,7 @@
 import 'package:aimy_ai/homepage/pages/aimmy.dart';
 import 'package:aimy_ai/homepage/pages/homescreen.dart';
 import 'package:aimy_ai/homepage/pages/profilepage.dart';
+import 'package:aimy_ai/homepage/pages/resultscreen.dart';
 import 'package:flutter/material.dart';
 
 class SidePage extends StatefulWidget {
@@ -165,7 +166,11 @@ class _SidePageState extends State<SidePage> {
             Navigator.of(context).push(
               MaterialPageRoute(builder: (context) => AimmyChatbotScreen()),
             );
-          }
+              } else if (title == 'Results') { // Add this new condition
+      Navigator.of(context).pushReplacement(
+        MaterialPageRoute(builder: (context) => const ResultsScreen()),
+      );
+    }
           print('Tapped on $title (Index: $index)');
         }
       },

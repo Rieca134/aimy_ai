@@ -47,6 +47,7 @@ class _HomeScreenState extends State<HomeScreen> {
     return GestureDetector(
       onTap: () {
         // Implement what happens when this card is tapped
+        print('Button clicked');
       },
       child: Container(
         width: 120,
