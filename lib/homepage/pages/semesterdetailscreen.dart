@@ -17,7 +17,7 @@ class SemesterDetailsScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFF8B0000), // Dark red background
+      backgroundColor: const Color(0xFF8B0000),
       appBar: AppBar(
         leading: IconButton(
           icon: const Icon(Icons.arrow_back),
@@ -48,7 +48,7 @@ class SemesterDetailsScreen extends StatelessWidget {
           ),
         ],
       ),
-      endDrawer: const SidePage(initialIndex: 4), // Still highlight 'Results'
+      endDrawer: const SidePage(initialIndex: 4),
       body: SafeArea(
         child: Column(
           children: [
@@ -145,7 +145,7 @@ class SubjectCard extends StatelessWidget {
     return Card(
       elevation: 2,
       margin: const EdgeInsets.symmetric(vertical: 8.0),
-      color: const Color(0xFFF5F5F5), // Light gray background
+      color: const Color(0xFFF5F5F5),
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(15.0),
         side: const BorderSide(color: Color(0xFFEEEEEE), width: 1.0),
@@ -188,7 +188,7 @@ class SubjectCard extends StatelessWidget {
                   style: TextStyle(
                     fontSize: 50.0,
                     fontWeight: FontWeight.bold,
-                    color: Colors.red[100], // Faded red color
+                    color: Colors.red[100],
                   ),
                 ),
               ],

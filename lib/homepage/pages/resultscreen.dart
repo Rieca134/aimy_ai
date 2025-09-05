@@ -1,5 +1,4 @@
 // lib/homepage/pages/results_screen.dart
-
 import 'package:aimy_ai/homepage/pages/semesterdetailscreen.dart';
 import 'package:aimy_ai/homepage/pages/sidepage.dart';
 import 'package:aimy_ai/models/subject_result.dart';
@@ -133,7 +132,6 @@ class ResultsScreen extends StatelessWidget {
                         ),
                       ),
                       const SizedBox(height: 16.0),
-                      // Loop through the dummy data to build the cards dynamically
                       ...semesterData.keys.map((semesterName) {
                         return SemesterCard(
                           year: semesterName,
@@ -185,7 +183,7 @@ class SemesterCard extends StatelessWidget {
         padding: const EdgeInsets.all(16.0),
         margin: const EdgeInsets.symmetric(vertical: 8.0),
         decoration: BoxDecoration(
-          color: const Color(0xFFF5F5F5), // Light gray background
+          color: const Color(0xFFF5F5F5),
           borderRadius: BorderRadius.circular(15.0),
           border: Border.all(color: Colors.grey.shade300),
         ),
