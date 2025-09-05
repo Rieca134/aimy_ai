@@ -42,7 +42,7 @@ class _LoginPageState extends State<LoginPage> {
 
     // Replace this with your actual backend API endpoint
     // Note: The base URL provided in your previous query is used here.
-    const String apiUrl = 'https://aimyai.bdudcloud.com/auth/login/';
+    const String apiUrl = 'https://aimyai.inlakssolutions.com/auth/login/';
 
     try {
       final response = await http.post(

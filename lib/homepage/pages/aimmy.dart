@@ -1,4 +1,8 @@
+import 'package:aimy_ai/homepage/pages/sidepage.dart';
 import 'package:flutter/material.dart';
+import 'package:http/http.dart' as http; // Import the http package
+import 'dart:convert'; // Import this to encode/decode JSON
+import 'package:shared_preferences/shared_preferences.dart';
 
 // Enum to differentiate between message senders
 enum Sender { user, aimmy }
@@ -17,14 +21,10 @@ class AimmyChatbotScreen extends StatefulWidget {
 }
 
 class _AimmyChatbotScreenState extends State<AimmyChatbotScreen> {
-  final List<ChatMessage> _messages = []; // Start with an empty list
+  final List<ChatMessage> _messages = [];
   final TextEditingController _textController = TextEditingController();
   final ScrollController _scrollController = ScrollController();
-
-  @override
-  void initState() {
-    super.initState();
-  }
+  bool _isAimmyTyping = false; // New state variable for the typing indicator
 
   @override
   void dispose() {
@@ -33,26 +33,97 @@ class _AimmyChatbotScreenState extends State<AimmyChatbotScreen> {
     super.dispose();
   }
 
-  void _sendMessage(String text) {
-    if (text.trim().isEmpty) return; // Don't send empty messages
+ // --- MODIFIED _sendMessage FUNCTION WITH AUTH TOKEN ---
+  void _sendMessage(String text) async {
+    if (text.trim().isEmpty) return;
 
+    // 1. Add the user's message to the list
     setState(() {
       _messages.add(ChatMessage(text: text, sender: Sender.user));
+      _textController.clear();
+      _isAimmyTyping = true;
     });
-    _textController.clear();
     _scrollToBottom();
 
-    // Simulate Aimmy's response after a short delay
-    Future.delayed(const Duration(milliseconds: 1000), () {
+    try {
+      const String chatEndpoint = "https://aimyai.inlakssolutions.com/aimy/chat/ask/";
+
+      // 2. Get the token from SharedPreferences
+      final prefs = await SharedPreferences.getInstance();
+      final token = prefs.getString('authToken');
+
+      if (token == null || token.isEmpty) {
+        setState(() {
+          _isAimmyTyping = false;
+          _messages.add(ChatMessage(
+            text: 'Error: No authentication token found. Please log in again.',
+            sender: Sender.aimmy,
+          ));
+        });
+        return;
+      }
+
+      final body = {
+        'question': text,
+        'session_id': 1,
+        'document_id': 0,
+        'max_results': 5,
+        'temperature': 0.7,
+      };
+
+      print("➡️ Sending request: $body with token: $token");
+
+      final response = await http.post(
+        Uri.parse(chatEndpoint),
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer $token', // 🔑 Add auth header here
+        },
+        body: jsonEncode(body),
+      );
+
+      print("⬅️ Status: ${response.statusCode}");
+      print("⬅️ Body: ${response.body}");
+
+if (response.statusCode == 200) {
+  final responseBody = jsonDecode(response.body);
+
+  // Extract from the nested structure
+  final aimmyResponse =
+      responseBody['data']?['answer'] ?? // ✅ answer is inside data
+      responseBody['response'] ??
+      responseBody['answer'] ??
+      responseBody['message'] ??
+      'Error: Unexpected API response.';
+
+  setState(() {
+    _isAimmyTyping = false;
+    _messages.add(ChatMessage(
+      text: aimmyResponse.toString(),
+      sender: Sender.aimmy,
+    ));
+  });
+      } else {
+        setState(() {
+          _isAimmyTyping = false;
+          _messages.add(ChatMessage(
+            text: 'Error: Could not get a response. Status: ${response.statusCode}',
+            sender: Sender.aimmy,
+          ));
+        });
+      }
+    } catch (e) {
       setState(() {
+        _isAimmyTyping = false;
         _messages.add(ChatMessage(
-          text: 'Got it! I\'ll respond to: "$text". How else can I help?',
+          text: 'Error: Failed to connect to Aimmy. Please check your network.',
           sender: Sender.aimmy,
         ));
       });
-      _scrollToBottom();
-    });
+    }
+    _scrollToBottom();
   }
+
 
   void _scrollToBottom() {
     if (_scrollController.hasClients) {
@@ -64,18 +135,32 @@ class _AimmyChatbotScreenState extends State<AimmyChatbotScreen> {
     }
   }
 
+  // --- MODIFIED build METHOD to include the typing indicator ---
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: const Color(0xFF8B0000),
-      appBar: AppBar(
+           appBar: AppBar(
+        title: const Text('Aimmy'),
         backgroundColor: const Color(0xFF8B0000),
-        title: const Text(
-          'Aimmy',
-          style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+        foregroundColor: Colors.white,
+        titleTextStyle: const TextStyle(
+          fontSize: 30,
+          fontWeight: FontWeight.bold,
+          color: Colors.white,
         ),
-        iconTheme: const IconThemeData(color: Colors.white),
+        actions: [
+          // NEW: Add the Builder to open the endDrawer
+          Builder(
+            builder: (context) => IconButton(
+              icon: const Icon(Icons.menu),
+              onPressed: () => Scaffold.of(context).openEndDrawer(),
+            ),
+          ),
+        ],
       ),
+      // NEW: Use the reusable SidePage widget
+      endDrawer: const SidePage(initialIndex: 1),
       body: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
@@ -92,13 +177,11 @@ class _AimmyChatbotScreenState extends State<AimmyChatbotScreen> {
                 padding: const EdgeInsets.all(16.0),
                 child: Column(
                   children: [
-                    // Conditional content based on whether there are messages
                     if (_messages.isEmpty)
-                      // *** MODIFIED THIS SECTION ***
                       Expanded(
                         child: Column(
-                          mainAxisAlignment: MainAxisAlignment.center, // Vertically center content
-                          crossAxisAlignment: CrossAxisAlignment.center, // Horizontally center content
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          crossAxisAlignment: CrossAxisAlignment.center,
                           children: [
                             const Text(
                               'What can I help you with?',
@@ -109,32 +192,32 @@ class _AimmyChatbotScreenState extends State<AimmyChatbotScreen> {
                               ),
                               textAlign: TextAlign.center,
                             ),
-                            const SizedBox(height: 20.0), // Space between text and input field
-                            SizedBox( // Input field for initial state, centered with question
-                              width: MediaQuery.of(context).size.width * 0.85, // Same width as when chat active
-                              child: _buildInputField(), // Re-use the input field widget
+                            const SizedBox(height: 20.0),
+                            SizedBox(
+                              width: MediaQuery.of(context).size.width * 0.85,
+                              child: _buildInputField(),
                             ),
                           ],
                         ),
                       )
                     else
-                      // Chat messages list when active
                       Expanded(
                         child: ListView.builder(
                           controller: _scrollController,
-                          itemCount: _messages.length,
+                          itemCount: _messages.length + (_isAimmyTyping ? 1 : 0), // Add 1 for the typing indicator
                           itemBuilder: (context, index) {
+                            if (index == _messages.length && _isAimmyTyping) {
+                              return _buildTypingIndicator();
+                            }
                             return _buildMessageBubble(_messages[index]);
                           },
                         ),
                       ),
-                    // If messages are present, show the input field below the chat.
-                    // If messages are empty, the input field is already included in the centered Column above.
                     if (_messages.isNotEmpty)
-                      Column( // Wrap the input field in a column to align it consistently
+                      Column(
                         children: [
-                          const SizedBox(height: 16.0), // Space between chat and input field
-                          Align( // Still align to center for general chat state
+                          const SizedBox(height: 16.0),
+                          Align(
                             alignment: Alignment.center,
                             child: SizedBox(
                               width: MediaQuery.of(context).size.width * 0.85,
@@ -153,9 +236,7 @@ class _AimmyChatbotScreenState extends State<AimmyChatbotScreen> {
     );
   }
 
-  // --- Helper Widgets ---
-
-  // Extracted the input field creation into a reusable widget
+  // --- Helper Widgets (Unchanged) ---
   Widget _buildInputField() {
     return Row(
       children: [
@@ -202,6 +283,7 @@ class _AimmyChatbotScreenState extends State<AimmyChatbotScreen> {
   }
 
   Widget _buildMessageBubble(ChatMessage message) {
+    // ... (This widget remains the same as your original code) ...
     final bool isUser = message.sender == Sender.user;
     final Color bubbleColor = isUser ? const Color(0xFFFCE4EC) : Colors.grey[100]!;
     final Color textColor = isUser ? Colors.black87 : Colors.black87;
@@ -241,6 +323,22 @@ class _AimmyChatbotScreenState extends State<AimmyChatbotScreen> {
             ),
           ],
         ),
+      ),
+    );
+  }
+
+  // --- NEW FEATURE: Typing Indicator Widget ---
+  Widget _buildTypingIndicator() {
+    return Align(
+      alignment: Alignment.centerLeft,
+      child: Container(
+        margin: const EdgeInsets.symmetric(vertical: 4.0, horizontal: 8.0),
+        padding: const EdgeInsets.all(12.0),
+        decoration: BoxDecoration(
+          color: Colors.grey[100]!,
+          borderRadius: BorderRadius.circular(15.0),
+        ),
+        child: const Text('Aimmy is typing...', style: TextStyle(color: Colors.black54, fontStyle: FontStyle.italic)),
       ),
     );
   }

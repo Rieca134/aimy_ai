@@ -54,7 +54,7 @@ class _SignUpPageState extends State<SignUpPage> {
     });
 
     // Replace this with your actual backend API endpoint for sign-up/registration
-    const String apiUrl = 'https://aimyai.bdudcloud.com/auth/signup/';
+    const String apiUrl = 'https://aimyai.inlakssolutions.com/auth/signup/';
 
 try {
   final int? departmentId = int.tryParse(_departmentController.text);

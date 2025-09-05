@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:aimy_ai/homepage/pages/sidepage.dart';
 
 class ProfileScreen extends StatefulWidget {
   @override
@@ -18,13 +19,11 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
   String _error = '';
 
   // Placeholder for the backend URL. The auth token will be retrieved from storage.
-  // TODO: Replace with your actual backend URL.
-  final String _baseUrl = 'https://aimyai.bdudcloud.com';
+  final String _baseUrl = 'https://aimyai.inlakssolutions.com';
 
   @override
   void initState() {
     super.initState();
-    // Corrected the class name from TabBarController to TabController
     _tabController = TabController(length: 3, vsync: this);
     _tabController.addListener(() {
       if (mounted) {
@@ -55,7 +54,6 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
         return;
       }
 
-      // Using the /auth/profile/ endpoint from your provided image
       final response = await http.get(
         Uri.parse('$_baseUrl/auth/profile/'),
         headers: {
@@ -133,19 +131,31 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
     final String fullName = '$firstName $lastName'.trim();
 
     return Scaffold(
-      backgroundColor: const Color(0xFF8B0000), // Set scaffold background to red for smooth transition
-      appBar: AppBar(
-        backgroundColor: const Color(0xFF8B0000), // Dark red app bar
-        title: const Text(
-          'Profile',
-          style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+      backgroundColor: const Color(0xFF8B0000),
+     appBar: AppBar(
+        title: const Text('Profile'),
+        backgroundColor: const Color(0xFF8B0000),
+        foregroundColor: Colors.white,
+        titleTextStyle: const TextStyle(
+          fontSize: 30,
+          fontWeight: FontWeight.bold,
+          color: Colors.white,
         ),
-        iconTheme: const IconThemeData(color: Colors.white), // For the back arrow
+        actions: [
+          // NEW: Add the Builder to open the endDrawer
+          Builder(
+            builder: (context) => IconButton(
+              icon: const Icon(Icons.menu),
+              onPressed: () => Scaffold.of(context).openEndDrawer(),
+            ),
+          ),
+        ],
       ),
+      // NEW: Use the reusable SidePage widget
+      endDrawer: const SidePage(initialIndex: 2),
       body: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          // Top Section (Profile Header - Dark Red Background)
           Container(
             color: const Color(0xFF8B0000), // Dark red background for this section
             padding: const EdgeInsets.symmetric(vertical: 20.0, horizontal: 16.0),
@@ -190,14 +200,13 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
               ],
             ),
           ),
-          // Main Content Area (White Background with Top Border Radius)
           Expanded(
             child: Container(
               decoration: const BoxDecoration(
-                color: Colors.white, // Explicitly set white background for this section
+                color: Colors.white,
                 borderRadius: BorderRadius.only(
-                  topLeft: Radius.circular(25.0), // Top-left radius
-                  topRight: Radius.circular(25.0), // Top-right radius
+                  topLeft: Radius.circular(25.0),
+                  topRight: Radius.circular(25.0),
                 ),
               ),
               child: Column(
@@ -252,7 +261,7 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Using first_name and last_name as per your API schema
+          // Using first_name and last_name as per API schema
           _buildInfoField(context, 'First Name', _profileData['first_name'] ?? 'N/A'),
           _buildInfoField(context, 'Last Name', _profileData['last_name'] ?? 'N/A'),
           _buildInfoField(context, 'Student ID', _profileData['student_id'] ?? 'N/A'),
@@ -297,7 +306,6 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // The schema only provides 'email' for contact details
           _buildInfoField(context, 'Email', _profileData['email'] ?? 'N/A'),
           _buildInfoField(context, 'School Email', _profileData['schoolEmail'] ?? 'N/A'),
           _buildInfoField(context, 'Personal Email', _profileData['personalEmail'] ?? 'N/A'),
