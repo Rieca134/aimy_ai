@@ -3,6 +3,8 @@ import 'package:http/http.dart' as http;
 import 'dart:convert';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:aimy_ai/homepage/pages/sidepage.dart';
+import 'package:image_picker/image_picker.dart';
+import 'dart:io' if (dart.library.html) 'dart:html' as html;
 
 class ProfileScreen extends StatefulWidget {
   @override
@@ -18,8 +20,17 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
   Map<String, dynamic> _profileData = {};
   String _error = '';
 
-  // Placeholder for the backend URL. The auth token will be retrieved from storage.
+  // Controllers for the update text fields
+  final TextEditingController _firstNameController = TextEditingController();
+  final TextEditingController _lastNameController = TextEditingController();
+  final TextEditingController _phoneNumberController = TextEditingController();
+  final TextEditingController _yearOfStudyController = TextEditingController();
+  final TextEditingController _denominationController = TextEditingController();
+  final TextEditingController _feeCategoryController = TextEditingController();
+  final TextEditingController _postalAddressController = TextEditingController();
+
   final String _baseUrl = 'https://aimyai.inlakssolutions.com';
+  
 
   @override
   void initState() {
@@ -36,14 +47,29 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
     _fetchProfileData();
   }
 
-  // Fetch profile data from the backend using an HTTP request
+  @override
+  void dispose() {
+    _tabController.removeListener(() {});
+    _tabController.dispose();
+    _firstNameController.dispose();
+    _lastNameController.dispose();
+    _phoneNumberController.dispose();
+    _yearOfStudyController.dispose();
+    _denominationController.dispose();
+    _feeCategoryController.dispose();
+    _postalAddressController.dispose();
+    super.dispose();
+  }
+
   Future<void> _fetchProfileData() async {
+    setState(() {
+      _isLoading = true;
+      _error = '';
+    });
     try {
-      // Retrieve the authentication token from SharedPreferences
       final prefs = await SharedPreferences.getInstance();
       final String? authToken = prefs.getString('authToken');
 
-      // If we don't have an auth token, we can't proceed
       if (authToken == null || authToken.isEmpty) {
         if (mounted) {
           setState(() {
@@ -69,10 +95,10 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
           setState(() {
             _profileData = data;
             _isLoading = false;
+            _populateControllers();
           });
         }
       } else {
-        // Handle API errors based on status code
         if (mounted) {
           setState(() {
             _error = 'Failed to load profile data: Status ${response.statusCode}';
@@ -81,7 +107,6 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
         }
       }
     } catch (e) {
-      // Handle network or other exceptions
       if (mounted) {
         setState(() {
           _error = 'Failed to connect to the server. Please check your network or try again.';
@@ -91,13 +116,161 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
     }
   }
 
-  @override
-  void dispose() {
-    _tabController.removeListener(() {}); // Remove listener before disposing
-    _tabController.dispose();
-    super.dispose();
+  void _populateControllers() {
+    _firstNameController.text = _profileData['first_name'] ?? '';
+    _lastNameController.text = _profileData['last_name'] ?? '';
+    _phoneNumberController.text = _profileData['phone_number'] ?? '';
+    _yearOfStudyController.text = _profileData['year_of_study']?.toString() ?? '';
+    _denominationController.text = _profileData['denomination'] ?? '';
+    _feeCategoryController.text = _profileData['feeCategory'] ?? '';
+    _postalAddressController.text = _profileData['postalAddress'] ?? '';
   }
 
+  // --- START OF MODIFIED CODE ---
+  Future<void> _uploadProfileImage() async {
+    final ImagePicker picker = ImagePicker();
+    final XFile? image = await picker.pickImage(source: ImageSource.gallery);
+
+    if (image == null) {
+      // User canceled the image picking
+      return;
+    }
+
+    try {
+      setState(() {
+        _isLoading = true;
+      });
+
+      final prefs = await SharedPreferences.getInstance();
+      final String? authToken = prefs.getString('authToken');
+
+      if (authToken == null || authToken.isEmpty) {
+        if (mounted) {
+          setState(() {
+            _error = 'Authentication token is missing.';
+            _isLoading = false;
+          });
+        }
+        return;
+      }
+      
+      final uri = Uri.parse('$_baseUrl/auth/profile/image/');
+      final request = http.MultipartRequest('PATCH', uri);
+      request.headers['Authorization'] = 'Bearer $authToken';
+
+      // Read the image file as bytes, which works on all platforms.
+      final bytes = await image.readAsBytes();
+      
+      request.files.add(
+        http.MultipartFile.fromBytes(
+          'profile_image', // The field name on the server
+          bytes,
+          filename: image.name, // The file name
+        ),
+      );
+
+      final response = await request.send();
+      final responseBody = await response.stream.bytesToString();
+
+      if (response.statusCode == 200) {
+        print('Profile image updated successfully.');
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Profile image updated successfully!')),
+          );
+        }
+        await _fetchProfileData(); // Refresh profile data to show the new image
+      } else {
+        final errorData = json.decode(responseBody);
+        final errorMessage = errorData['detail'] ?? 'Failed to update image.';
+        print('Error uploading image: ${response.statusCode}, $errorMessage');
+        if (mounted) {
+          setState(() {
+            _error = errorMessage;
+            _isLoading = false;
+          });
+        }
+      }
+    } catch (e) {
+      print('Network error during image upload: $e');
+      if (mounted) {
+        setState(() {
+          _error = 'Failed to upload image. Check your network connection.';
+          _isLoading = false;
+        });
+      }
+    }
+  }
+  // --- END OF MODIFIED CODE ---
+
+  // New function to handle profile data update
+  Future<void> _updateProfileData() async {
+    setState(() {
+      _isLoading = true;
+      _error = '';
+    });
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final String? authToken = prefs.getString('authToken');
+
+      if (authToken == null || authToken.isEmpty) {
+        if (mounted) {
+          setState(() {
+            _error = 'Authentication token is missing.';
+            _isLoading = false;
+          });
+        }
+        return;
+      }
+
+      final response = await http.patch(
+        Uri.parse('$_baseUrl/auth/profile/update'),
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer $authToken',
+        },
+        body: json.encode({
+          'first_name': _firstNameController.text.trim(),
+          'last_name': _lastNameController.text.trim(),
+          'phone_number': _phoneNumberController.text.trim(),
+          'year_of_study': int.tryParse(_yearOfStudyController.text.trim()) ?? 0,
+          'denomination': _denominationController.text.trim(),
+          'feeCategory': _feeCategoryController.text.trim(),
+          'postalAddress': _postalAddressController.text.trim(),
+        }),
+      );
+
+      if (response.statusCode == 200) {
+        print('Profile data updated successfully.');
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Profile updated successfully!')),
+          );
+        }
+        await _fetchProfileData(); // Refresh profile data to reflect changes
+      } else {
+        final errorData = json.decode(response.body);
+        final errorMessage = errorData['detail'] ?? 'Failed to update profile.';
+        print('Error updating profile: ${response.statusCode}, $errorMessage');
+        if (mounted) {
+          setState(() {
+            _error = errorMessage;
+            _isLoading = false;
+          });
+        }
+      }
+    } catch (e) {
+      print('Network error during profile update: $e');
+      if (mounted) {
+        setState(() {
+          _error = 'Failed to update profile. Check your network connection.';
+          _isLoading = false;
+        });
+      }
+    }
+  }
+
+  // ... (existing build methods)
   @override
   Widget build(BuildContext context) {
     if (_isLoading) {
@@ -125,14 +298,20 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
       );
     }
 
-    // Extract names for the profile header. Using first_name and last_name as per the schema.
     final String firstName = _profileData['first_name'] ?? '';
     final String lastName = _profileData['last_name'] ?? '';
     final String fullName = '$firstName $lastName'.trim();
+    final String? profileImageUrl = _profileData['profile_image'];
+
+    // Added code to handle the insecure HTTP URL
+    String? safeProfileImageUrl;
+    if (profileImageUrl != null && profileImageUrl.isNotEmpty) {
+      safeProfileImageUrl = profileImageUrl.replaceFirst('http://', 'https://');
+    }
 
     return Scaffold(
       backgroundColor: const Color(0xFF8B0000),
-     appBar: AppBar(
+      appBar: AppBar(
         title: const Text('Profile'),
         backgroundColor: const Color(0xFF8B0000),
         foregroundColor: Colors.white,
@@ -159,21 +338,40 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
             padding: const EdgeInsets.symmetric(vertical: 20.0, horizontal: 16.0),
             child: Row(
               children: [
-                Container(
-                  width: 80,
-                  height: 80,
-                  decoration: BoxDecoration(
-                    color: Colors.grey[300],
-                    shape: BoxShape.circle,
-                  ),
-                  child: Icon(
-                    Icons.person,
-                    size: 60,
-                    color: Colors.grey[600],
-                  ),
+                Stack(
+                  children: [
+                    CircleAvatar(
+                      radius: 40,
+                      backgroundColor: Colors.grey[300],
+                      // Use the safeProfileImageUrl here
+                      backgroundImage: safeProfileImageUrl != null ? NetworkImage(safeProfileImageUrl) : null,
+                      child: safeProfileImageUrl == null
+                          ? Icon(
+                              Icons.person,
+                              size: 60,
+                              color: Colors.grey[600],
+                            )
+                          : null,
+                    ),
+                    Positioned(
+                      bottom: 0,
+                      right: 0,
+                      child: GestureDetector(
+                        onTap: _uploadProfileImage,
+                        child: CircleAvatar(
+                          radius: 15,
+                          backgroundColor: Colors.white,
+                          child: Icon(
+                            Icons.camera_alt,
+                            size: 18,
+                            color: const Color(0xFF8B0000),
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
                 ),
                 const SizedBox(width: 16.0),
-                // User Name and Details
                 Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
@@ -246,16 +444,21 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
     );
   }
 
-  // --- Helper Methods for Building Tab Contents ---
-
   Widget _buildPersonalTabContent() {
     return SingleChildScrollView(
       padding: const EdgeInsets.all(16.0),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Using first_name and last_name as per API schema
-          _buildInfoField(context, 'First Name', _profileData['first_name'] ?? 'N/A'),
+          _buildInfoField(context, 'First Name', _profileData['first_name'] ?? 'N/A', showEditButton: true, onEdit: () => _showUpdateDialog(
+            title: 'Update Personal Details',
+            fields: {
+              'First Name': _firstNameController,
+              'Last Name': _lastNameController,
+              'Phone Number': _phoneNumberController,
+              'Year of Study': _yearOfStudyController,
+            },
+          )),
           _buildInfoField(context, 'Last Name', _profileData['last_name'] ?? 'N/A'),
           _buildInfoField(context, 'Student ID', _profileData['student_id'] ?? 'N/A'),
           _buildInfoField(context, 'Username', _profileData['username'] ?? 'N/A'),
@@ -265,7 +468,12 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
           _buildInfoField(context, 'Country', _profileData['country'] ?? 'N/A'),
           _buildInfoField(context, 'Region', _profileData['region'] ?? 'N/A'),
           _buildInfoField(context, 'Religion', _profileData['religion'] ?? 'N/A'),
-          _buildInfoField(context, 'Denomination/Group', _profileData['denomination'] ?? 'N/A', showEditButton: true),
+          _buildInfoField(context, 'Denomination/Group', _profileData['denomination'] ?? 'N/A', showEditButton: true, onEdit: () => _showUpdateDialog(
+            title: 'Update Denomination',
+            fields: {
+              'Denomination/Group': _denominationController,
+            },
+          )),
         ],
       ),
     );
@@ -277,17 +485,25 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Displaying college and year of study from the schema
           _buildInfoField(context, 'College', _profileData['college'] ?? 'N/A'),
-          _buildInfoField(context, 'Year of Study', _profileData['year_of_study']?.toString() ?? 'N/A'),
-          // Accessing the nested department name
+          _buildInfoField(context, 'Year of Study', _profileData['year_of_study']?.toString() ?? 'N/A', showEditButton: true, onEdit: () => _showUpdateDialog(
+            title: 'Update Year of Study',
+            fields: {
+              'Year of Study': _yearOfStudyController,
+            },
+          )),
           _buildInfoField(context, 'Department', _profileData['department']?['name'] ?? 'N/A'),
           _buildInfoField(context, 'Index Number', _profileData['indexNumber'] ?? 'N/A'),
           _buildInfoField(context, 'Programme Stream', _profileData['programmeStream'] ?? 'N/A'),
           _buildInfoField(context, 'Programme Option', _profileData['programmeOption'] ?? 'N/A'),
           _buildInfoField(context, 'Current Year', _profileData['currentYear'] ?? 'N/A'),
           _buildInfoField(context, 'Campus', _profileData['campus'] ?? 'N/A'),
-          _buildInfoField(context, 'Fee Category', _profileData['feeCategory'] ?? 'N/A', showEditButton: true),
+          _buildInfoField(context, 'Fee Category', _profileData['feeCategory'] ?? 'N/A', showEditButton: true, onEdit: () => _showUpdateDialog(
+            title: 'Update Fee Category',
+            fields: {
+              'Fee Category': _feeCategoryController,
+            },
+          )),
         ],
       ),
     );
@@ -303,15 +519,24 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
           _buildInfoField(context, 'School Email', _profileData['schoolEmail'] ?? 'N/A'),
           _buildInfoField(context, 'Personal Email', _profileData['personalEmail'] ?? 'N/A'),
           _buildInfoField(context, 'KNUST Mobile', _profileData['knustMobile'] ?? 'N/A'),
-          _buildInfoField(context, 'Primary Personal Mobile', _profileData['primaryPersonalMobile'] ?? 'N/A'),
+          _buildInfoField(context, 'Primary Personal Mobile', _profileData['primaryPersonalMobile'] ?? 'N/A', showEditButton: true, onEdit: () => _showUpdateDialog(
+            title: 'Update Mobile Number',
+            fields: {
+              'Primary Personal Mobile': _phoneNumberController,
+            },
+          )),
           _buildInfoField(context, 'Alternate Personal Mobile', _profileData['alternatePersonalMobile'] ?? 'N/A'),
-          _buildInfoField(context, 'Postal Address', _profileData['postalAddress'] ?? 'N/A', showEditButton: true),
+          _buildInfoField(context, 'Postal Address', _profileData['postalAddress'] ?? 'N/A', showEditButton: true, onEdit: () => _showUpdateDialog(
+            title: 'Update Postal Address',
+            fields: {
+              'Postal Address': _postalAddressController,
+            },
+          )),
           _buildInfoField(context, 'Residential Address', _profileData['residentialAddress'] ?? 'N/A'),
         ],
       ),
     );
   }
-
 
   Widget _buildCustomTab(BuildContext context, String text, int index) {
     final bool isSelected = _currentTabIndex == index;
@@ -342,7 +567,7 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
     );
   }
 
-  Widget _buildInfoField(BuildContext context, String label, String value, {bool showEditButton = false}) {
+  Widget _buildInfoField(BuildContext context, String label, String value, {bool showEditButton = false, VoidCallback? onEdit}) {
     return Padding(
       padding: const EdgeInsets.only(bottom: 20.0),
       child: Column(
@@ -374,9 +599,7 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
                 SizedBox(
                   height: 35,
                   child: ElevatedButton(
-                    onPressed: () {
-                      print('Edit button tapped for $label');
-                    },
+                    onPressed: onEdit,
                     style: ElevatedButton.styleFrom(
                       backgroundColor: const Color(0xFF8B0000),
                       shape: RoundedRectangleBorder(
@@ -397,6 +620,50 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
           const Divider(height: 25.0, thickness: 1.0, color: Colors.black12),
         ],
       ),
+    );
+  }
+
+  // New method to show the update dialog
+  void _showUpdateDialog({required String title, required Map<String, TextEditingController> fields}) {
+    showDialog(
+      context: context,
+      builder: (context) {
+        return AlertDialog(
+          title: Text(title),
+          content: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: fields.entries.map((entry) {
+                final label = entry.key;
+                final controller = entry.value;
+                return Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 8.0),
+                  child: TextField(
+                    controller: controller,
+                    decoration: InputDecoration(
+                      labelText: label,
+                      border: const OutlineInputBorder(),
+                    ),
+                  ),
+                );
+              }).toList(),
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(),
+              child: const Text('Cancel'),
+            ),
+            ElevatedButton(
+              onPressed: () {
+                _updateProfileData();
+                Navigator.of(context).pop();
+              },
+              child: const Text('Update'),
+            ),
+          ],
+        );
+      },
     );
   }
 }

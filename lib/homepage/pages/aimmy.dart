@@ -119,99 +119,95 @@ class _AimmyChatbotScreenState extends State<AimmyChatbotScreen> {
     }
   }
 
-void _sendMessage({String? text}) async {
-  if ((text == null || text.trim().isEmpty) && _selectedFile == null) {
-    return;
-  }
-
-  String? documentId;
-    
-  if (_selectedFile != null) {
-    String? uploadedDocumentId = await _uploadFile();
-    if (uploadedDocumentId != null) {
-      documentId = uploadedDocumentId;
-      // Add a brief delay to give the API time to process the document
-      // Adjust the duration as needed based on your API's performance
-      await Future.delayed(Duration(seconds: 5)); 
-    }
-  }
-
-  setState(() {
-    if (_selectedFile != null) {
-      _messages.add(
-        ChatMessage(
-          text: 'File uploaded: ${_selectedFileName.value!}',
-          sender: Sender.user,
-          type: MessageType.file,
-          filePath: _selectedFile!.path,
-        ),
-      );
-    }
-    _messages.add(ChatMessage(text: text ?? '', sender: Sender.user));
-    _textController.clear();
-    _isAimmyTyping = true;
-  });
-  _scrollToBottom();
-    
-  try {
-    final prefs = await SharedPreferences.getInstance();
-    final token = prefs.getString('authToken');
-
-    if (token == null || token.isEmpty) {
-      _handleApiError('Error: No authentication token found. Please log in again.');
+  void _sendMessage({String? text}) async {
+    if ((text == null || text.trim().isEmpty) && _selectedFile == null) {
       return;
     }
 
-    final uri = Uri.parse("https://aimyai.inlakssolutions.com/aimy/chat/ask/");
-    final headers = {
-      'Authorization': 'Bearer $token',
-      'Content-Type': 'application/json',
-    };
-    
-    // Create a dynamic body based on whether a document was uploaded
-    Map<String, dynamic> bodyData = {
-      'question': text ?? '',
-      'session_id': '1',
-      'max_results': '5',
-      'temperature': '0.7',
-    };
-    
-    if (documentId != null) {
-      bodyData['document_id'] = int.parse(documentId);
+    String? documentId;
+      
+    if (_selectedFile != null) {
+      String? uploadedDocumentId = await _uploadFile();
+      if (uploadedDocumentId != null) {
+        documentId = uploadedDocumentId;
+        // Add a brief delay to give the API time to process the document
+        // Adjust the duration as needed based on your API's performance
+        await Future.delayed(Duration(seconds: 5)); 
+      }
     }
 
-    final body = jsonEncode(bodyData);
+    setState(() {
+      if (_selectedFile != null) {
+        _messages.add(
+          ChatMessage(
+            text: 'File uploaded: ${_selectedFileName.value!}',
+            sender: Sender.user,
+            type: MessageType.file,
+            filePath: _selectedFile!.path,
+          ),
+        );
+      }
+      _messages.add(ChatMessage(text: text ?? '', sender: Sender.user));
+      _textController.clear();
+      _isAimmyTyping = true;
+    });
+    _scrollToBottom();
+      
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final token = prefs.getString('authToken');
 
-    final response = await http.post(uri, headers: headers, body: body);
+      if (token == null || token.isEmpty) {
+        _handleApiError('Error: No authentication token found. Please log in again.');
+        return;
+      }
 
-    if (response.statusCode == 200) {
-      final responseBody = jsonDecode(response.body);
-      final aimmyResponse =
-          responseBody['data']?['answer'] ??
-              responseBody['response'] ??
-              responseBody['answer'] ??
-              responseBody['message'] ??
-              'Error: Unexpected API response.';
+      final uri = Uri.parse("https://aimyai.inlakssolutions.com/aimy/chat/ask/");
+      final headers = {
+        'Authorization': 'Bearer $token',
+        'Content-Type': 'application/json',
+      };
+      
+      Map<String, dynamic> bodyData = {
+        'question': text ?? '',
+        'session_id': '1',
+        'max_results': '5',
+        'temperature': '0.7',
+        'document_id': documentId != null ? int.parse(documentId) : 0,
+      };
 
-      setState(() {
-        _isAimmyTyping = false;
-        _messages.add(ChatMessage(
-          text: aimmyResponse.toString(),
-          sender: Sender.aimmy,
-        ));
-      });
-    } else {
-      final errorBody = jsonDecode(response.body);
-      _handleApiError(
-          'Error: Could not get a response. Status: ${response.statusCode}. Reason: ${errorBody['message'] ?? 'Unknown error'}.');
+      final body = jsonEncode(bodyData);
+
+      final response = await http.post(uri, headers: headers, body: body);
+
+      if (response.statusCode == 200) {
+        final responseBody = jsonDecode(response.body);
+        final aimmyResponse =
+            responseBody['data']?['answer'] ??
+                responseBody['response'] ??
+                responseBody['answer'] ??
+                responseBody['message'] ??
+                'Error: Unexpected API response.';
+
+        setState(() {
+          _isAimmyTyping = false;
+          _messages.add(ChatMessage(
+            text: aimmyResponse.toString(),
+            sender: Sender.aimmy,
+          ));
+        });
+      } else {
+        final errorBody = jsonDecode(response.body);
+        _handleApiError(
+            'Error: Could not get a response. Status: ${response.statusCode}. Reason: ${errorBody['message'] ?? 'Unknown error'}.');
+      }
+    } catch (e) {
+      _handleApiError('Error: Failed to connect to chatbot. Please check your network.');
     }
-  } catch (e) {
-    _handleApiError('Error: Failed to connect to chatbot. Please check your network.');
+    _scrollToBottom();
+
+    _removeSelectedFile();
   }
-  _scrollToBottom();
-
-  _removeSelectedFile();
-}
 
   void _handleApiError(String message) {
     setState(() {
@@ -352,109 +348,105 @@ void _sendMessage({String? text}) async {
     );
   }
 
-//... other methods and code
-
-Widget _buildInputField() {
-  return Row(
-    children: [
-      Container(
-        decoration: BoxDecoration(
-          color: const Color(0xFF8B0000),
-          borderRadius: BorderRadius.circular(12.0),
+  Widget _buildInputField() {
+    return Row(
+      children: [
+        Container(
+          decoration: BoxDecoration(
+            color: const Color(0xFF8B0000),
+            borderRadius: BorderRadius.circular(12.0),
+          ),
+          child: IconButton(
+            icon: const Icon(Icons.attach_file, color: Colors.white),
+            onPressed: _pickFile,
+          ),
         ),
-        child: IconButton(
-          icon: const Icon(Icons.attach_file, color: Colors.white),
-          onPressed: _pickFile,
-        ),
-      ),
-      const SizedBox(width: 8.0),
-      Expanded(
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            ValueListenableBuilder<String?>(
-              valueListenable: _selectedFileName,
-              builder: (context, fileName, child) {
-                if (fileName != null) {
-                  return Padding(
-                    padding: const EdgeInsets.only(bottom: 8.0),
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 8.0, vertical: 4.0),
-                      decoration: BoxDecoration(
-                        color: Colors.grey[200],
-                        borderRadius: BorderRadius.circular(8.0),
-                        border: Border.all(color: Colors.grey[300]!),
-                      ),
-                      child: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Icon(_getFileIcon(fileName), color: Colors.black54),
-                          const SizedBox(width: 4.0),
-                          Flexible(
-                            child: Text(
-                              fileName,
-                              style: TextStyle(fontSize: 14.0, color: Colors.black87),
-                              overflow: TextOverflow.ellipsis,
+        const SizedBox(width: 8.0),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              ValueListenableBuilder<String?>(
+                valueListenable: _selectedFileName,
+                builder: (context, fileName, child) {
+                  if (fileName != null) {
+                    return Padding(
+                      padding: const EdgeInsets.only(bottom: 8.0),
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 8.0, vertical: 4.0),
+                        decoration: BoxDecoration(
+                          color: Colors.grey[200],
+                          borderRadius: BorderRadius.circular(8.0),
+                          border: Border.all(color: Colors.grey[300]!),
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(_getFileIcon(fileName), color: Colors.black54),
+                            const SizedBox(width: 4.0),
+                            Flexible(
+                              child: Text(
+                                fileName,
+                                style: TextStyle(fontSize: 14.0, color: Colors.black87),
+                                overflow: TextOverflow.ellipsis,
+                              ),
                             ),
-                          ),
-                          const SizedBox(width: 4.0),
-                          GestureDetector(
-                            onTap: _removeSelectedFile,
-                            child: Icon(Icons.close, size: 16, color: Colors.grey[600]),
-                          ),
-                        ],
+                            const SizedBox(width: 4.0),
+                            GestureDetector(
+                              onTap: _removeSelectedFile,
+                              child: Icon(Icons.close, size: 16, color: Colors.grey[600]),
+                            ),
+                          ],
+                        ),
                       ),
-                    ),
-                  );
-                }
-                return SizedBox.shrink(); // Hide the widget when no file is selected
-              },
-            ),
-            TextField(
-              controller: _textController,
-              decoration: InputDecoration(
-                hintText: _selectedFile != null ? 'Add a question for the file...' : 'Ask me anything',
-                hintStyle: TextStyle(color: Colors.grey[500]),
-                fillColor: Colors.grey[50],
-                filled: true,
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(12.0),
-                  borderSide: BorderSide(color: Colors.grey[300]!, width: 1.0),
-                ),
-                enabledBorder: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(12.0),
-                  borderSide: BorderSide(color: Colors.grey[300]!, width: 1.0),
-                ),
-                focusedBorder: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(12.0),
-                  borderSide: const BorderSide(color: Color(0xFF8B0000), width: 2.0),
-                ),
-                contentPadding: const EdgeInsets.symmetric(vertical: 15.0, horizontal: 15.0),
+                    );
+                  }
+                  return SizedBox.shrink(); // Hide the widget when no file is selected
+                },
               ),
-              minLines: 1,
-              maxLines: 5,
-              keyboardType: TextInputType.text,
-              onSubmitted: (text) => _sendMessage(text: text),
-            ),
-          ],
+              TextField(
+                controller: _textController,
+                decoration: InputDecoration(
+                  hintText: _selectedFile != null ? 'Add a question for the file...' : 'Ask me anything',
+                  hintStyle: TextStyle(color: Colors.grey[500]),
+                  fillColor: Colors.grey[50],
+                  filled: true,
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12.0),
+                    borderSide: BorderSide(color: Colors.grey[300]!, width: 1.0),
+                  ),
+                  enabledBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12.0),
+                    borderSide: BorderSide(color: Colors.grey[300]!, width: 1.0),
+                  ),
+                  focusedBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12.0),
+                    borderSide: const BorderSide(color: Color(0xFF8B0000), width: 2.0),
+                  ),
+                  contentPadding: const EdgeInsets.symmetric(vertical: 15.0, horizontal: 15.0),
+                ),
+                minLines: 1,
+                maxLines: 5,
+                keyboardType: TextInputType.text,
+                onSubmitted: (text) => _sendMessage(text: text),
+              ),
+            ],
+          ),
         ),
-      ),
-      const SizedBox(width: 8.0),
-      Container(
-        decoration: BoxDecoration(
-          color: const Color(0xFF8B0000),
-          borderRadius: BorderRadius.circular(12.0),
+        const SizedBox(width: 8.0),
+        Container(
+          decoration: BoxDecoration(
+            color: const Color(0xFF8B0000),
+            borderRadius: BorderRadius.circular(12.0),
+          ),
+          child: IconButton(
+            icon: const Icon(Icons.send, color: Colors.white),
+            onPressed: () => _sendMessage(text: _textController.text),
+          ),
         ),
-        child: IconButton(
-          icon: const Icon(Icons.send, color: Colors.white),
-          onPressed: () => _sendMessage(text: _textController.text),
-        ),
-      ),
-    ],
-  );
-}
-
-//... other methods and code
+      ],
+    );
+  }
 
   bool _isImageFile(String fileName) {
     final lowerCaseName = fileName.toLowerCase();

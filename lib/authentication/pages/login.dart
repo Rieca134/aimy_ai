@@ -40,13 +40,13 @@ class _LoginPageState extends State<LoginPage> {
       _errorMessage = null;
     });
 
-    // Replace this with your actual backend API endpoint
-    // Note: The base URL provided in your previous query is used here.
-    const String apiUrl = 'https://aimyai.inlakssolutions.com/auth/login/';
+    // The backend API endpoints
+    const String loginApiUrl = 'https://aimyai.inlakssolutions.com/auth/login/';
+    const String profileApiUrl = 'https://aimyai.inlakssolutions.com/auth/profile/';
 
     try {
       final response = await http.post(
-        Uri.parse(apiUrl),
+        Uri.parse(loginApiUrl),
         headers: <String, String>{
           'Content-Type': 'application/json; charset=UTF-8',
         },
@@ -62,13 +62,6 @@ class _LoginPageState extends State<LoginPage> {
       if (response.statusCode == 200) {
         // If the server returns a 200 OK response, parse the JSON
         final Map<String, dynamic> responseBody = jsonDecode(response.body);
-
-        // Print the full response body for debugging purposes.
-        // This will help you identify the correct key for the token.
-        print('Login success! Response body: $responseBody');
-
-        // Extract the token from the response.
-        // We now check for 'access' first, as indicated by your debug output.
         final String? authToken = responseBody['access'] ?? responseBody['access_token'] ?? responseBody['token'];
 
         if (authToken != null && authToken.isNotEmpty) {
@@ -77,27 +70,49 @@ class _LoginPageState extends State<LoginPage> {
           // Save the token to local storage
           await prefs.setString('authToken', authToken);
           print('Token saved successfully: $authToken');
+          
+          String fullName = 'User';
+          
+          // ---- NEW CODE: Fetch profile data immediately after login ----
+          final profileResponse = await http.get(
+            Uri.parse(profileApiUrl),
+            headers: {
+              'Authorization': 'Bearer $authToken',
+            },
+          );
 
-          // Access the nested 'user' object from the response
-          final Map<String, dynamic>? user = responseBody['user'];
-          String fullName = 'User'; // Default name
-
-          if (user != null) {
-            final String firstName = user['first_name'] ?? '';
-            final String lastName = user['last_name'] ?? '';
+          if (profileResponse.statusCode == 200) {
+            final Map<String, dynamic> profileData = json.decode(profileResponse.body);
+            
+            // Get the full name
+            final String firstName = profileData['first_name'] ?? '';
+            final String lastName = profileData['last_name'] ?? '';
             String combinedName = '$firstName $lastName'.trim();
-
             if (combinedName.isNotEmpty) {
               fullName = combinedName;
             }
+            
+            // Get and save the profile image URL
+            final String? profileImageUrl = profileData['profile_image'];
+            if (profileImageUrl != null && profileImageUrl.isNotEmpty) {
+              await prefs.setString('profileImageUrl', profileImageUrl);
+              print('Profile image URL saved: $profileImageUrl');
+            } else {
+              print('No profile image URL found in profile data.');
+            }
+          } else {
+            print('Failed to fetch profile data: ${profileResponse.statusCode}');
           }
+          // ---- END OF NEW CODE ----
 
           // Navigate to the HomeScreen upon successful login
           // The HomeScreen requires the fullName as a parameter.
-          Navigator.pushReplacement(
-            context,
-            MaterialPageRoute(builder: (context) => HomeScreen(fullName: fullName)),
-          );
+          if (mounted) {
+            Navigator.pushReplacement(
+              context,
+              MaterialPageRoute(builder: (context) => HomeScreen(fullName: fullName)),
+            );
+          }
         } else {
           // Handle case where token is missing from a successful response
           setState(() {
@@ -108,11 +123,9 @@ class _LoginPageState extends State<LoginPage> {
         // Handle failed login attempts
         print('Login failed: ${response.statusCode}');
         print('Response body: ${response.body}');
-
         final Map<String, dynamic> errorBody = jsonDecode(response.body);
         setState(() {
-          _errorMessage = errorBody['message'] ??
-              'Login failed. Please check your credentials.';
+          _errorMessage = errorBody['message'] ?? 'Login failed. Please check your credentials.';
         });
       }
     } catch (e) {
