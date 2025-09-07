@@ -5,7 +5,7 @@ import 'package:aimy_ai/homepage/pages/resultscreen.dart';
 import 'package:flutter/material.dart';
 
 class SidePage extends StatefulWidget {
-  // Add a parameter to store the index of the current page.
+  // A parameter to store the index of the current page.
   final int initialIndex;
   const SidePage({super.key, required this.initialIndex});
 
@@ -36,7 +36,7 @@ class _SidePageState extends State<SidePage> {
   @override
   void initState() {
     super.initState();
-    // Use the value passed to the widget.
+    // Using the value passed to the widget.
     _selectedIndex = widget.initialIndex;
   }
 
@@ -88,7 +88,7 @@ class _SidePageState extends State<SidePage> {
                             color: Colors.white,
                             borderRadius: BorderRadius.circular(8.0),
                           ),
-                          child: currentItemWidget, // The ListTile itself
+                          child: currentItemWidget,
                         ),
                       );
                     }
@@ -97,7 +97,7 @@ class _SidePageState extends State<SidePage> {
                       children: [
                         if (isDividerTarget)
                           const Divider(color: Colors.white54, height: 40.0),
-                        currentItemWidget, // This will be either the padded white Container or just the ListTile
+                        currentItemWidget,
                       ],
                     );
                   }).toList(),
