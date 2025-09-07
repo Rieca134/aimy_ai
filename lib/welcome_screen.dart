@@ -1,3 +1,5 @@
+import 'package:aimy_ai/authentication/pages/login.dart';
+import 'package:aimy_ai/authentication/pages/signuppage.dart';
 import 'package:flutter/material.dart';
 
 class WelcomeScreen extends StatefulWidget {
@@ -35,7 +37,10 @@ class _WelcomeScreenState extends State<WelcomeScreen> {
                 children: [
                   GestureDetector(
                     onTap: () {
-                      
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(builder: (context) => const LoginPage()),
+                      );
                     },
                     child: Container(
                       width: MediaQuery.of(context).size.width * 0.8,
@@ -56,7 +61,10 @@ class _WelcomeScreenState extends State<WelcomeScreen> {
                   const SizedBox(height: 10),
                   GestureDetector(
                     onTap: () {
-                      
+                        Navigator.push(
+                        context,
+                        MaterialPageRoute(builder: (context) => const SignUpPage()),
+                      );
                     },
                     child: Container(
                       width: MediaQuery.of(context).size.width * 0.8,
@@ -67,7 +75,7 @@ class _WelcomeScreenState extends State<WelcomeScreen> {
                         border: Border.all(color: const Color(0xFF7F090B))
                       ),
                       child: const Text(
-                        'Forgot Password',
+                        'Tap to Sign Up',
                         textAlign: TextAlign.center,
                         style: TextStyle(color:Color(0xFF7F090B), fontSize: 16,  
                         

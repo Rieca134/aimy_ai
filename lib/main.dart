@@ -1,4 +1,7 @@
 import 'package:aimy_ai/authentication/pages/login.dart';
+import 'package:aimy_ai/authentication/pages/signuppage.dart';
+import 'package:aimy_ai/homepage/pages/homescreen.dart';
+import 'package:aimy_ai/homepage/pages/sidepage.dart';
 import 'package:aimy_ai/welcome_screen.dart';
 import 'package:flutter/material.dart';
 
@@ -18,7 +21,8 @@ class MyApp extends StatelessWidget {
         colorScheme: ColorScheme.fromSeed(seedColor: Colors.deepPurple),
         useMaterial3: true,
       ),
-      home: const LoginPage(),
+      home: WelcomeScreen(),
+      debugShowCheckedModeBanner: false,
     );
   }
 }
