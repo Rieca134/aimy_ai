@@ -46,7 +46,6 @@ class _HomeScreenState extends State<HomeScreen> {
   Widget _buildActionCard(String title, Color color) {
     return GestureDetector(
       onTap: () {
-        // Implement what happens when this card is tapped
         print('Button clicked');
       },
       child: Container(
@@ -100,7 +99,6 @@ class _HomeScreenState extends State<HomeScreen> {
           IconButton(
             icon: const Icon(Icons.notifications),
             onPressed: () {
-              // Handle notification icon press
               print('Notification icon pressed');
             },
           ),

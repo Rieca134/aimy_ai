@@ -64,7 +64,7 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
 
       if (response.statusCode == 200) {
         final Map<String, dynamic> data = json.decode(response.body);
-        print('Profile data received: $data'); // Debug print for profile data
+        print('Profile data received: $data');
         if (mounted) {
           setState(() {
             _profileData = data;
@@ -142,7 +142,6 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
           color: Colors.white,
         ),
         actions: [
-          // NEW: Add the Builder to open the endDrawer
           Builder(
             builder: (context) => IconButton(
               icon: const Icon(Icons.menu),
@@ -151,17 +150,15 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
           ),
         ],
       ),
-      // NEW: Use the reusable SidePage widget
       endDrawer: const SidePage(initialIndex: 2),
       body: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           Container(
-            color: const Color(0xFF8B0000), // Dark red background for this section
+            color: const Color(0xFF8B0000),
             padding: const EdgeInsets.symmetric(vertical: 20.0, horizontal: 16.0),
             child: Row(
               children: [
-                // Profile Icon
                 Container(
                   width: 80,
                   height: 80,
@@ -230,16 +227,12 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
                       ),
                     ),
                   ),
-                  // TabBarView for the content of each tab
                   Expanded(
                     child: TabBarView(
                       controller: _tabController,
                       children: [
-                        // Content for 'Personal' Tab
                         _buildPersonalTabContent(),
-                        // Content for 'Programme' Tab
                         _buildProgrammeTabContent(),
-                        // Content for 'Contact' Tab
                         _buildContactTabContent(),
                       ],
                     ),
@@ -319,7 +312,6 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
     );
   }
 
-  // --- Reusable Widgets ---
 
   Widget _buildCustomTab(BuildContext context, String text, int index) {
     final bool isSelected = _currentTabIndex == index;
@@ -383,7 +375,6 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
                   height: 35,
                   child: ElevatedButton(
                     onPressed: () {
-                      // This is where you would implement logic to handle data updates
                       print('Edit button tapped for $label');
                     },
                     style: ElevatedButton.styleFrom(

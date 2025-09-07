@@ -108,7 +108,6 @@ class SemesterDetailsScreen extends StatelessWidget {
               ),
               child: ElevatedButton(
                 onPressed: () {
-                  // Handle view summary action
                   print('View Summary button pressed');
                 },
                 style: ElevatedButton.styleFrom(
